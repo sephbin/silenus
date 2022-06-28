@@ -29,7 +29,7 @@ class master(AdvancedSearchAdmin):
 	actions = m_actions
 	save_on_top = m_save_on_top
 	save_as = m_save_as
-	list_per_page = 500
+	list_per_page = 25
 
 	def resaveSelected(self, request, queryset):
 		for q in queryset:
