@@ -65,6 +65,15 @@ def isUser(request):
 def from_json(json_obj):
 	"""Convert to rhino3dm from json"""
 	return rhino3dm.CommonObject.Decode(json_obj)
+def to_json(rhino_geom):
+	return rhino3dm.CommonObject.Encode(rhino_geom)
+
+def to_hops_json(rhino_geom):
+	class_name = rhino_geom.__class__.__name__
+	outOb = {"type": "Rhino.Geometry.%s"%(class_name), "data":
+		json.dumps(to_json(rhino_geom))
+		}
+	return outOb
 
 def _coerce_value(param_type, param_data):
 	import rhino3dm
@@ -72,40 +81,50 @@ def _coerce_value(param_type, param_data):
 	# get data as dict
 	
 	# parse data
-	print(param_type)
+	# print(param_type)
 	if param_type.startswith("Rhino.Geometry.Point3d"):
 		data = json.loads(param_data)
 		data = {k.lower(): v for k, v in data.items()}
 		return rhino3dm.Point3d(**data)
 	if param_type.startswith("Rhino.Geometry."):
-		data = json.loads(param_data)
+		try:	data = json.loads(param_data)
+		except:	data = param_data
 		return from_json(data)
 	if param_type.startswith("System.String"):
 		data = eval(param_data)
-		try: data = json.loads(data)
+		try:
+			data = json.loads(data)
+			if "archive3dm" in data and "opennurbs" in data:
+				data = _coerce_value("Rhino.Geometry.", data)
 		except Exception as e: print(e)
+		# print("string",data)
 		return data
 	return param_data
 
 def parse_params(payload):
-	outOb = {"payload":payload}
-	for hopsInput in payload["values"]:
-		# print(hopsInput)
-		upOb = []
-		for treeAdress, treeBranch in hopsInput["InnerTree"].items():
-			apOb = []
-			outOb[hopsInput["ParamName"]+"_original"] = treeBranch
-			for hopsObject in treeBranch:
-				try:
-					a = _coerce_value(hopsObject["type"],hopsObject["data"])
-					apOb.append(a)
-					# print("-"*4,a)
-				except Exception as e:
-					apOb.append(None)
-					# print(errorLog(e))
-					pass
-			upOb.append(apOb)
-		if len(upOb) < 2:
-			upOb = upOb[0]
-		outOb[hopsInput["ParamName"]] = upOb
+	try:
+		outOb = {"payload":payload}
+		for hopsInput in payload["values"]:
+			# print(hopsInput)
+			upOb = []
+			for treeAdress, treeBranch in hopsInput["InnerTree"].items():
+				apOb = []
+				outOb[hopsInput["ParamName"]+"_original"] = treeBranch
+				for hopsObject in treeBranch:
+					# print("hopsObject",hopsObject)
+					try:
+						a = _coerce_value(hopsObject["type"],hopsObject["data"])
+						apOb.append(a)
+						# print("-"*4,a)
+					except Exception as e:
+						apOb.append(None)
+						# print(errorLog(e))
+						pass
+				upOb.append(apOb)
+			if len(upOb) < 2:
+				upOb = upOb[0]
+			outOb[hopsInput["ParamName"]] = upOb
+	except Exception as e:
+		print(errorLog(e))
+		pass
 	return outOb

@@ -8,6 +8,7 @@ urlpatterns = [
     path(r'packMono/', views.packMono),
     path(r'packGeom/', views.packGeom),
     path(r'objectCRUD/', views.objectCRUD),
+    path(r'devTest/', views.devTest),
     #############
 ]
 urlpatters = urlpatterns +[

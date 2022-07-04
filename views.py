@@ -26,7 +26,9 @@ def solve(request):
 			return JsonResponse({})
 
 		elif request.method =="POST":
-			payload = parse_params(getPayload(request))
+			payload = getPayload(request)
+			payload = parse_params(payload)
+			# print("payload", payload)
 			function = payload["payload"]["pointer"]
 			if function.endswith("/"):
 				function = function.split("/")[-2]
@@ -34,7 +36,7 @@ def solve(request):
 				function = function.split("/")[-1]
 			function = globals()[function]
 			payload["__source"] = "hops"
-			print(function)
+			# print(function)
 			out = function(request, payload)
 			return JsonResponse(out)
 	except Exception as e:
@@ -506,3 +508,32 @@ def objectCRUD(request, payload={}, log=[]):
 	except Exception as e:
 		print(errorLog(e))
 		return errorLog(e)
+
+
+
+@csrf_exempt
+def devTest(request, payload={}, log=[]):
+	name = "devTest"
+	structure = {
+			"Python": {"version":str(sys.version), "info":str(sys.version_info)},
+			"Description": "Parses CSV into data tree",
+			"Inputs": [
+				# {"Name": "geom", "Nickname": "G", "Description": "geom", "ParamType": "Geometry", "ResultType": "Rhino.Geometry.GeometryBase", "AtLeast": 1, "AtMost": 1,}
+				{"Name": "geom", "Nickname": "G", "Description": "geom", "ParamType": "Text", "ResultType": "System.String", "Default":None, "AtLeast": 1, "AtMost": 2147483647,}
+			],
+			"Outputs": [
+				{"Name": "Log", "Nickname": "L", "Description": "Log", "ParamType": "Text", "ResultType": "System.String", "AtLeast": 1, "AtMost": 1},
+				{"Name": "Output", "Nickname": "O", "Description": "Output", "ParamType": "Geometry", "ResultType": "Rhino.Geometry.GeometryBase", "AtLeast": 1, "AtMost": 2147483647},
+			]}
+	if request.method =="GET":	return JsonResponse(structure)
+	if payload != {}:
+		rGeom = list(map(lambda x: to_hops_json(x), payload["geom"]))
+		# print(rGeom)
+		outputContent = [{"type": "Rhino.Geometry.PolylineCurve", "data": "{\"version\":10000,\"archive3dm\":70,\"opennurbs\":-1907588931,\"data\":\"+n8CAGkBAAAAAAAA+/8CABQAAAAAAAAA5tTXTkfp0xG/5QAQgwEi8E6cu9v8/wIAMQEAAAAAAAAQCQAAAAAAAAAAAEnAAAAAAABcp0AAAAAAAAAAAAAAAAAAAEnAVGTgc0c9xUAAAAAAAAAAAAAAAAAAlKZAVGTgc0c9xUAAAAAAAAAAAAAAAAAAlKZAVGTgc0cwvUAAAAAAAAAAAAAAAAAACKtAVGTgc0cwvUAAAAAAAAAAAAAAAAAACKtAKjLwuSObwEAAAAAAAAAAAAAAAAAALMBAKjLwuSObwEAAAAAAAAAAAAAAAAAALMBAAAAAAABcp0AAAAAAAAAAAAAAAAAAAEnAAAAAAABcp0AAAAAAAAAAAAkAAAAAAAAAAAAAAAAAAAAArrBAAAAAAABquEAAAAAAAJXAQAAAAAAAksNAAAAAAAAoyUAAAAAAAMnNQAAAAAAAutNA8TBhlxN42UADAAAAYc7Kzv9/AoAAAAAAAAAAAA==\"}"},
+		{"type": "Rhino.Geometry.PolylineCurve", "data": "{\"version\":10000,\"archive3dm\":70,\"opennurbs\":-1907588931,\"data\":\"+n8CAGkBAAAAAAAA+/8CABQAAAAAAAAA5tTXTkfp0xG/5QAQgwEi8E6cu9v8/wIAMQEAAAAAAAAQCQAAAAAAAAAAAEnAAAAAAABcp0AAAAAAAAAAAAAAAAAAAEnAVGTgc0c9xUAAAAAAAAAAAAAAAAAAlKZAVGTgc0c9xUAAAAAAAAAAAAAAAAAAlKZAVGTgc0cwvUAAAAAAAAAAAAAAAAAACKtAVGTgc0cwvUAAAAAAAAAAAAAAAAAACKtAKjLwuSObwEAAAAAAAAAAAAAAAAAALMBAKjLwuSObwEAAAAAAAAAAAAAAAAAALMBAAAAAAABcp0AAAAAAAAAAAAAAAAAAAEnAAAAAAABcp0AAAAAAAAAAAAkAAAAAAAAAAAAAAAAAAAAArrBAAAAAAABquEAAAAAAAJXAQAAAAAAAksNAAAAAAAAoyUAAAAAAAMnNQAAAAAAAutNA8TBhlxN42UADAAAAYc7Kzv9/AoAAAAAAAAAAAA==\"}"},
+		]
+		out = {"values": [
+			{"ParamName": "Log", "InnerTree": {"0": [{"type": "System.String", "data": "\""+str(log)+"\""}]}},
+			{"ParamName": "Output", "InnerTree": {"0": rGeom}}
+		]}
+		return out
