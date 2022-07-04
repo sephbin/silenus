@@ -456,9 +456,9 @@ def packGeom(request, payload={}):
 		]}
 		return out
 
-def objectCRUD(request, payload={}, log=[]):
+def objectCreate(request, payload={}, log=[]):
 	try:
-		name = "objectCRUD"
+		name = "objectCreate"
 		structure = {
 			"Python": {"version":str(sys.version), "info":str(sys.version_info)}, "Category": "Hops", "Subcategory": "Hops Python", "Uri": "/"+name, "Name": name, "Nickname": name, "Description": name,
 			"Inputs": [
@@ -466,7 +466,8 @@ def objectCRUD(request, payload={}, log=[]):
 				{"Name": "modelClass", "Nickname": "C", "Description": "modelClass", "ParamType": "Text", "ResultType": "System.String", "Default":None, "AtLeast": 1, "AtMost": 2147483647},
 				{"Name": "identifiers", "Nickname": "I", "Description": "identifiers", "ParamType": "Text", "ResultType": "System.String", "Default":None, "AtLeast": 1, "AtMost": 2147483647},
 				{"Name": "defaults", "Nickname": "D", "Description": "defaults", "ParamType": "Text", "ResultType": "System.String", "Default":None, "AtLeast": 1, "AtMost": 2147483647},
-				{"Name": "geometry", "Nickname": "G", "Geometry": "defaults", "ParamType": "Mesh", "ResultType": "Rhino.Geometry.Mesh", "Default":None, "AtLeast": 1, "AtMost": 2147483647},
+				# {"Name": "geometry", "Nickname": "G", "Description": "defaults", "ParamType": "Mesh", "ResultType": "Rhino.Geometry.Mesh", "Default":None, "AtLeast": 1, "AtMost": 2147483647},
+				{"Name": "geometry", "Nickname": "G", "Description": "geometry", "ParamType": "Text", "ResultType": "System.String", "Default":None, "AtLeast": 1, "AtMost": 2147483647,}
 				# {"Name": "geometry", "Nickname": "G", "Geometry": "defaults", "ParamType": "Geometry", "ResultType": "Rhino.Geometry.Curve", "Default":None, "AtLeast": 1, "AtMost": 2147483647, "Default": None},
 
 			],
@@ -478,7 +479,7 @@ def objectCRUD(request, payload={}, log=[]):
 			# print(payload)
 			import json
 			from itertools import cycle
-			geometry_o = payload["geometry_original"]
+			geometry_o = payload["geometry"]
 			for modelClass, kwargs, defaults in zip(cycle(payload["modelClass"]), payload["identifiers"], cycle(payload["defaults"])):
 				print(modelClass, kwargs, defaults)
 				print(type(modelClass), type(kwargs), type(defaults))
@@ -489,10 +490,10 @@ def objectCRUD(request, payload={}, log=[]):
 				# for d in dir(rhino3dm):
 					# print(d)
 
-
+				print(defaults)
 				if "data" not in defaults:
 					defaults["data"] = {}
-				defaults["data"]["geometry"] = geometry_o
+				defaults["data"]["geometry"] = list(map(lambda x: to_hops_json(x), geometry_o))
 				kwargs["defaults"] = defaults
 				modelInstance = getattr(sys.modules[__name__], modelClass)
 				objectInstance, created = modelInstance.objects.update_or_create(**kwargs)
@@ -509,9 +510,44 @@ def objectCRUD(request, payload={}, log=[]):
 		print(errorLog(e))
 		return errorLog(e)
 
+def objectRead(request, payload={}, log=[]):
+	try:
+		name = "objectRead"
+		structure = {
+			"Python": {"version":str(sys.version), "info":str(sys.version_info)}, "Category": "Hops", "Subcategory": "Hops Python", "Uri": "/"+name, "Name": name, "Nickname": name, "Description": name,
+			"Inputs": [
+				# {"Name": "url", "Nickname": "url", "Description": "url", "ParamType": "Text", "ResultType": "System.String", "Default":None, "AtLeast": 1, "AtMost": 2147483647},
+				{"Name": "modelClass", "Nickname": "C", "Description": "modelClass", "ParamType": "Text", "ResultType": "System.String", "Default":None, "AtLeast": 1, "AtMost": 1},
+				{"Name": "identifiers", "Nickname": "I", "Description": "identifiers", "ParamType": "Text", "ResultType": "System.String", "Default":None, "AtLeast": 1, "AtMost": 1},
+			],
+			"Outputs": [
+				{"Name": "Log", "Nickname": "L", "Description": "Log", "ParamType": "Text", "ResultType": "System.String", "AtLeast": 1, "AtMost": 1},
+				{"Name": "Output_Geom", "Nickname": "OG", "Description": "Output Geom", "ParamType": "Geometry", "ResultType": "Rhino.Geometry.GeometryBase", "AtLeast": 1, "AtMost": 2147483647},
+				{"Name": "Output_Keys", "Nickname": "OK", "Description": "Output Keys", "ParamType": "Text", "ResultType": "System.String", "AtLeast": 1, "AtMost": 2147483647},
+				{"Name": "Output_Values", "Nickname": "OV", "Description": "Output Values", "ParamType": "Text", "ResultType": "System.String", "AtLeast": 1, "AtMost": 2147483647},
+			]}
+		if request.method =="GET":	return JsonResponse(structure)
+		if payload != {}:
+			# from itertools import cycle
+			outputContent = []
+			for modelClass, kwargs in zip(payload["modelClass"], payload["identifiers"]):
+				modelInstance = getattr(sys.modules[__name__], modelClass)
+				instance = get_object_or_404(modelInstance, **kwargs)
+				outputContent = outputContent+instance.data["geometry"]
+			# outputContent = list(map(lambda x: to_hops_json(x), outputContent))
+			out = {"values": [
+				{"ParamName": "Log", "InnerTree": {"0": [{"type": "System.String", "data": "\""+str(log)+"\""}]}},
+				{"ParamName": "Output_Geom", "InnerTree": {"0": outputContent}},
+				{"ParamName": "Output_Keys", "InnerTree": {"0": [{"type": "System.String", "data": "\""+str(log)+"\""}]}},
+				{"ParamName": "Output_Values", "InnerTree": {"0": [{"type": "System.String", "data": "\""+str(log)+"\""}]}},
+			]}
+			print(out)
+			return out
+	except Exception as e:
+		print(errorLog(e))
+		return errorLog(e)
 
 
-@csrf_exempt
 def devTest(request, payload={}, log=[]):
 	name = "devTest"
 	structure = {
@@ -528,10 +564,6 @@ def devTest(request, payload={}, log=[]):
 	if request.method =="GET":	return JsonResponse(structure)
 	if payload != {}:
 		rGeom = list(map(lambda x: to_hops_json(x), payload["geom"]))
-		# print(rGeom)
-		outputContent = [{"type": "Rhino.Geometry.PolylineCurve", "data": "{\"version\":10000,\"archive3dm\":70,\"opennurbs\":-1907588931,\"data\":\"+n8CAGkBAAAAAAAA+/8CABQAAAAAAAAA5tTXTkfp0xG/5QAQgwEi8E6cu9v8/wIAMQEAAAAAAAAQCQAAAAAAAAAAAEnAAAAAAABcp0AAAAAAAAAAAAAAAAAAAEnAVGTgc0c9xUAAAAAAAAAAAAAAAAAAlKZAVGTgc0c9xUAAAAAAAAAAAAAAAAAAlKZAVGTgc0cwvUAAAAAAAAAAAAAAAAAACKtAVGTgc0cwvUAAAAAAAAAAAAAAAAAACKtAKjLwuSObwEAAAAAAAAAAAAAAAAAALMBAKjLwuSObwEAAAAAAAAAAAAAAAAAALMBAAAAAAABcp0AAAAAAAAAAAAAAAAAAAEnAAAAAAABcp0AAAAAAAAAAAAkAAAAAAAAAAAAAAAAAAAAArrBAAAAAAABquEAAAAAAAJXAQAAAAAAAksNAAAAAAAAoyUAAAAAAAMnNQAAAAAAAutNA8TBhlxN42UADAAAAYc7Kzv9/AoAAAAAAAAAAAA==\"}"},
-		{"type": "Rhino.Geometry.PolylineCurve", "data": "{\"version\":10000,\"archive3dm\":70,\"opennurbs\":-1907588931,\"data\":\"+n8CAGkBAAAAAAAA+/8CABQAAAAAAAAA5tTXTkfp0xG/5QAQgwEi8E6cu9v8/wIAMQEAAAAAAAAQCQAAAAAAAAAAAEnAAAAAAABcp0AAAAAAAAAAAAAAAAAAAEnAVGTgc0c9xUAAAAAAAAAAAAAAAAAAlKZAVGTgc0c9xUAAAAAAAAAAAAAAAAAAlKZAVGTgc0cwvUAAAAAAAAAAAAAAAAAACKtAVGTgc0cwvUAAAAAAAAAAAAAAAAAACKtAKjLwuSObwEAAAAAAAAAAAAAAAAAALMBAKjLwuSObwEAAAAAAAAAAAAAAAAAALMBAAAAAAABcp0AAAAAAAAAAAAAAAAAAAEnAAAAAAABcp0AAAAAAAAAAAAkAAAAAAAAAAAAAAAAAAAAArrBAAAAAAABquEAAAAAAAJXAQAAAAAAAksNAAAAAAAAoyUAAAAAAAMnNQAAAAAAAutNA8TBhlxN42UADAAAAYc7Kzv9/AoAAAAAAAAAAAA==\"}"},
-		]
 		out = {"values": [
 			{"ParamName": "Log", "InnerTree": {"0": [{"type": "System.String", "data": "\""+str(log)+"\""}]}},
 			{"ParamName": "Output", "InnerTree": {"0": rGeom}}

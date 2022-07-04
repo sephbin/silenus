@@ -7,7 +7,8 @@ urlpatterns = [
     path(r'createData/', views.createData),
     path(r'packMono/', views.packMono),
     path(r'packGeom/', views.packGeom),
-    path(r'objectCRUD/', views.objectCRUD),
+    path(r'objectCreate/', views.objectCreate),
+    path(r'objectRead/', views.objectRead),
     path(r'devTest/', views.devTest),
     #############
 ]
