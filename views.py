@@ -212,8 +212,9 @@ def checkForWork(request):
 	log = []
 	computer_id = request.GET.get('computer-id')
 	dataPacket_instances = dataPacket.objects.filter(assigned_computer=computer_id, enabled=True, completed=False)
+	dataItem_instance = dataItem.objects.filter(processed=False).first()
 	if dataPacket_instances.count() == 0:
-		new_dataPacket = dataPacket(assigned_computer=computer_id)
+		new_dataPacket = dataPacket(assigned_computer=computer_id, dataSet= dataItem_instance.dataSet)
 		new_dataPacket.save()
 
 		log.append("new dataPacket")
