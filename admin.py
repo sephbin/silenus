@@ -10,7 +10,7 @@ m_list_display_links = ['name',]
 m_list_filter = ['enabled','enableDelete']
 m_search_fields = ["name","data","identifier",]
 m_readonly_fields = []
-m_actions = []
+m_actions = ['hardDeleteSelected', 'resaveSelected', 'enableDeleteSelected', 'disableDeleteSelected', 'clearIdentifierSelected', ]
 
 m_save_on_top = True
 m_save_as = True
