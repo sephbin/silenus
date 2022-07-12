@@ -12,7 +12,7 @@ urlpatterns = [
     path(r'devTest/', views.devTest),
     #############
 ]
-urlpatters = urlpatterns +[
+urlpatterns = urlpatterns +[
     path(r'checkForWork/', views.checkForWork),
 ]
 # urlpatterns = [
