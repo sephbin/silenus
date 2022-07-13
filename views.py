@@ -135,7 +135,7 @@ def createData(request, payload={}):
 		if request.method =="GET":	return JsonResponse(structure)
 		
 		print(payload)
-		if payload != {} and "__source" in payload:
+		if payload != {}:
 			log = []
 			payload = parse_params(getPayload(request))
 			print(payload)
@@ -146,16 +146,20 @@ def createData(request, payload={}):
 				defaults_kwargs = {}
 				for k, v in zip(payload["Data_Keys"],payload["Data_Values"]):
 					print(data_set, k, v)
-					if k.startswith("_"):
-						ko = data_set_ob.data[k.replace("_","")]["field"]
-						defaults_kwargs[ko] = v
+					ko = str(k)
+					if k.startswith("_") or k.startswith(".") :
+						try:		ko = data_set_ob.data[k.replace("_","").replace(".","")]["field"]
+						except:		ko = k.replace("_","").replace(".","")
+					
+					print(data_set, k, v)
+					if k.replace("_","").startswith("."):
+						search_kwargs[ko] = v
 					else:
-						ko = data_set_ob.data[k]["field"]
 						defaults_kwargs[ko] = v
-				print(search_kwargs)
-				print(defaults_kwargs)
+				# print(defaults_kwargs)
 				search_kwargs["dataSet"]=data_set_ob
 				search_kwargs["defaults"]=defaults_kwargs
+				print(search_kwargs)
 				dataItem_instance, created = dataItem.objects.update_or_create(**search_kwargs)
 				print(dataItem_instance, created)
 
@@ -166,46 +170,47 @@ def createData(request, payload={}):
 				{"ParamName": "Output", "InnerTree": {"0": outOb, }},
 			]}
 			# print(out)
-			return JsonResponse(out)
-		elif payload != {}:
-			outList = []
-			for item in payload["data"]:
-				data_set_ob, created = dataSet.objects.update_or_create(name=item["data_set"])
-				search_kwargs = {}
-				defaults_kwargs = {}
-				for k, v in item["search_kwargs"].items():
-					print(item["data_set"], data_set_ob, k, v)
-					if k.startswith("_"):
-						ko = data_set_ob.data[k.replace("_","")]["field"]
-						search_kwargs[ko] = v
-					else:
-						try:
-							ko = data_set_ob.data[k]["field"]
-							search_kwargs[ko] = v
-						except:
-							search_kwargs[k] = v
-				for k, v in item["defaults_kwargs"].items():
-					print(item["data_set"], data_set_ob, k, v)
-					if k.startswith("_"):
-						ko = data_set_ob.data[k.replace("_","")]["field"]
-						defaults_kwargs[ko] = v
-					else:
-						ko = data_set_ob.data[k]["field"]
-						defaults_kwargs[ko] = v
-				print("search_kwargs",search_kwargs)
-				print("defaults_kwargs",defaults_kwargs)
-				search_kwargs["dataSet"]= data_set_ob
-				search_kwargs["defaults"]=defaults_kwargs
-				dataItem_instance, created = dataItem.objects.update_or_create(**search_kwargs)
-				print(dataItem_instance, created)
-				outList.append(dataItem_instance.pk)
-			return JsonResponse({"error":False, "pks": outList})
+			return out
+		# elif payload != {}:
+		# 	outList = []
+		# 	for item in payload["data"]:
+		# 		data_set_ob, created = dataSet.objects.update_or_create(name=item["data_set"])
+		# 		search_kwargs = {}
+		# 		defaults_kwargs = {}
+		# 		for k, v in item["search_kwargs"].items():
+		# 			print(item["data_set"], data_set_ob, k, v)
+		# 			if k.startswith("_"):
+		# 				ko = data_set_ob.data[k.replace("_","")]["field"]
+		# 				search_kwargs[ko] = v
+		# 			else:
+		# 				try:
+		# 					ko = data_set_ob.data[k]["field"]
+		# 					search_kwargs[ko] = v
+		# 				except:
+		# 					search_kwargs[k] = v
+		# 		for k, v in item["defaults_kwargs"].items():
+		# 			print(item["data_set"], data_set_ob, k, v)
+		# 			if k.startswith("_"):
+		# 				ko = data_set_ob.data[k.replace("_","")]["field"]
+		# 				defaults_kwargs[ko] = v
+		# 			else:
+		# 				ko = data_set_ob.data[k]["field"]
+		# 				defaults_kwargs[ko] = v
+		# 		print("search_kwargs",search_kwargs)
+		# 		print("defaults_kwargs",defaults_kwargs)
+		# 		search_kwargs["dataSet"]= data_set_ob
+		# 		search_kwargs["defaults"]=defaults_kwargs
+		# 		dataItem_instance, created = dataItem.objects.update_or_create(**search_kwargs)
+		# 		print(dataItem_instance, created)
+		# 		outList.append(dataItem_instance.pk)
+			return {"error":False, "pks": outList}
 		else:
 			print("?")
-			return JsonResponse({"error":True})
+			return {"error":True}
 		instance_model = getattr(sys.modules[__name__], change["model"])
 		instance, created = instance_model.objects.update_or_create(**change["kwargs"])
 	except Exception as e:
+		print(errorLog(e))
 		return JsonResponse(errorLog(e))
 
 def checkForWork(request):
