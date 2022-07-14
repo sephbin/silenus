@@ -530,6 +530,7 @@ def objectRead(request, payload={}, log=[]):
 				{"Name": "Log", "Nickname": "L", "Description": "Log", "ParamType": "Text", "ResultType": "System.String", "AtLeast": 1, "AtMost": 1},
 				{"Name": "Output_Geom", "Nickname": "OG", "Description": "Output Geom", "ParamType": "Geometry", "ResultType": "Rhino.Geometry.GeometryBase", "AtLeast": 1, "AtMost": 2147483647},
 				{"Name": "Output_Dict", "Nickname": "OD", "Description": "Output Dictionary", "ParamType": "Text", "ResultType": "System.String", "AtLeast": 1, "AtMost": 2147483647},
+				{"Name": "Output_Count", "Nickname": "OC", "Description": "Output Count", "ParamType": "Integer", "ResultType": "System.Int32", "AtLeast": 1, "AtMost": 2147483647},
 				{"Name": "Output_Keys", "Nickname": "OK", "Description": "Output Keys", "ParamType": "Text", "ResultType": "System.String", "AtLeast": 1, "AtMost": 2147483647},
 				{"Name": "Output_Values", "Nickname": "OV", "Description": "Output Values", "ParamType": "Text", "ResultType": "System.String", "AtLeast": 1, "AtMost": 2147483647},
 			]}
@@ -537,36 +538,43 @@ def objectRead(request, payload={}, log=[]):
 		if payload != {}:
 			# from itertools import cycle
 			outputContent = []
+			outputCount = []
 			outputDict = []
 			outputKeys = []
 			outputValues = []
 			for modelClass, kwargs in zip(payload["modelClass"], payload["identifiers"]):
 				modelInstance = getattr(sys.modules[__name__], modelClass)
-				instance = get_object_or_404(modelInstance, **kwargs)
-				data = instance.data
-				outputContent = outputContent+data["geometry"]
-				try: del data["geometry"]
-				except Exception as e: print(e)
-				outputDict.append(json.dumps(data))
-				keys = list(data)
-				outputKeys.append(json.dumps(keys))
-				vals = list(map(lambda x: data[x], keys))
-				outputValues.append(json.dumps(vals))
+				# instance = get_object_or_404(modelInstance, **kwargs)
+				instances = modelInstance.objects.filter(**kwargs)
+				for instance in instances:
+					data = instance.data
+					geom = data["geometry"]
+					outputCount.append(len(geom))
+					outputContent = outputContent+geom
+					try: del data["geometry"]
+					except Exception as e: print(e)
+					outputDict.append(json.dumps(data))
+					keys = list(data)
+					outputKeys.append(json.dumps(keys))
+					vals = list(map(lambda x: data[x], keys))
+					outputValues.append(json.dumps(vals))
 			outputDict = list(map(lambda x: {"type":"System.String", "data": x},outputDict))
 			outputKeys = list(map(lambda x: {"type":"System.String", "data": x},outputKeys))
 			outputValues = list(map(lambda x: {"type":"System.String", "data": x},outputValues))
+			outputCount = list(map(lambda x: {"type":"System.Int32", "data": x},outputCount))
 			# outputContent = list(map(lambda x: to_hops_json(x), outputContent))
 			out = {"values": [
 				{"ParamName": "Log", "InnerTree": {"0": [{"type": "System.String", "data": "\""+str(log)+"\""}]}},
 				{"ParamName": "Output_Geom", "InnerTree": {"0": outputContent}},
 				{"ParamName": "Output_Dict", "InnerTree": {"0": outputDict}},
+				{"ParamName": "Output_Count", "InnerTree": {"0": outputCount}},
 				{"ParamName": "Output_Keys", "InnerTree": {"0": outputKeys}},
 				{"ParamName": "Output_Values", "InnerTree": {"0": outputValues}},
 			]}
 			print(out)
 			return out
 	except Exception as e:
-		print(errorLog(e))
+		print("!"*50, errorLog(e))
 		return errorLog(e)
 
 
