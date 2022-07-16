@@ -599,3 +599,53 @@ def devTest(request, payload={}, log=[]):
 			{"ParamName": "Output", "InnerTree": {"0": rGeom}}
 		]}
 		return out
+
+
+def objectReadCSV(request, modelClass, filterString=""):
+	try:
+		import csv
+		modelInstance = getattr(sys.modules[__name__], modelClass)
+		kwargs = {}
+		if filterString != "":
+			filterString = filterString.split("|")
+			for kv in filterString:
+				k,v = tuple(kv.split(":"))
+				kwargs[k] = v
+		instances = modelInstance.objects.filter(**kwargs)
+		outputDict = []
+		keys = []
+		for instance in instances:
+			data = instance.data
+			try: del data["geometry"]
+			except Exception as e: print(e)
+			outputDict.append(data)
+			keys = list(set(keys+list(data)))
+		keys += list(map(lambda x: "__empty("+str(x)+")__",range(len(keys),99)))
+		values = []
+		csvValues = []
+		response = HttpResponse(content_type='text/csv')
+		response['Content-Disposition'] = 'attachment; filename="data.csv"'
+		writer = csv.writer(response)
+		writer.writerow(keys)
+		for oD in outputDict:
+			valAppend = []
+			csvAppend = []
+			for k in keys:
+				val = None
+				csvVal = ""
+				if k in oD:
+					val = {"content":oD[k]}
+					csvVal = oD[k]
+				valAppend.append(val)
+				csvAppend.append(csvVal)
+			values.append({"data":valAppend})
+			writer.writerow(csvAppend)
+		keys = {"data":map(lambda x: {"content": x}, keys)}
+		context = {"data":[keys]+values}
+		return response
+		# return render(request, "genericTable.html", context)
+		# writer.writerow(['Second row', 'A', 'B', 'C', '"Testing"', "Here's a quote"])
+
+	except Exception as e:
+		print("!"*50, errorLog(e))
+		return JsonResponse(errorLog(e))

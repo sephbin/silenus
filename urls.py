@@ -14,6 +14,8 @@ urlpatterns = [
 ]
 urlpatterns = urlpatterns +[
     path(r'checkForWork/', views.checkForWork),
+    path(r'objectReadCSV/<str:modelClass>/', views.objectReadCSV),
+    path(r'objectReadCSV/<str:modelClass>/<str:filterString>', views.objectReadCSV),
 ]
 # urlpatterns = [
 #     path(r'csv/', views.processcsv),

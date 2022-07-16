@@ -1,0 +1,9 @@
+<table>
+{% for row in data %}
+<tr>
+	{% for cell in row.data %}
+		<td>{{cell.content}}</td>
+	{% endfor %}
+</tr>
+{% endfor %}
+</table>
