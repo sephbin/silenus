@@ -616,6 +616,7 @@ def objectReadCSV(request, modelClass, filterString=""):
 		keys = []
 		for instance in instances:
 			data = instance.data
+			data["pk"] = instance.pk
 			try: del data["geometry"]
 			except Exception as e: print(e)
 			outputDict.append(data)
